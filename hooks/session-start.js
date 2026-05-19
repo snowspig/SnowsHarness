@@ -5,6 +5,7 @@
  * 1. Shows a brief environment status (NadirClaw, vLLM)
  * 2. Detects project type and loads relevant rules
  * 3. Shows enriched workspace briefing (key files, commands, git info, memory)
+ * 4. Auto-initializes MEMORY.md if the project's memory directory lacks it
  */
 
 const fs = require("fs");
@@ -18,18 +19,36 @@ function fetchJSON(url, timeout = 3000) {
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
-        try { resolve(JSON.parse(data)); } catch { resolve(null); }
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          resolve(null);
+        }
       });
     });
     req.on("error", () => resolve(null));
-    req.on("timeout", () => { req.destroy(); resolve(null); });
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(null);
+    });
   });
 }
 
 function detectProjectType(cwd) {
   const indicators = [
-    { type: "Python", files: ["pyproject.toml", "setup.py", "requirements.txt", "setup.cfg"] },
-    { type: "Frontend", files: ["package.json", "tsconfig.json", "vite.config.ts", "next.config.js"] },
+    {
+      type: "Python",
+      files: ["pyproject.toml", "setup.py", "requirements.txt", "setup.cfg"],
+    },
+    {
+      type: "Frontend",
+      files: [
+        "package.json",
+        "tsconfig.json",
+        "vite.config.ts",
+        "next.config.js",
+      ],
+    },
     { type: "Django", files: ["manage.py", "django"] },
     { type: "FastAPI", files: ["main.py"] },
     { type: "Rust", files: ["Cargo.toml"] },
@@ -91,10 +110,14 @@ function detectCommands(cwd) {
       }
 
       if (pkg.devDependencies) {
-        if (pkg.devDependencies.vitest || pkg.dependencies.vitest) commands.push("vitest");
-        if (pkg.devDependencies.jest || pkg.dependencies.jest) commands.push("jest");
-        if (pkg.devDependencies.eslint || pkg.dependencies.eslint) commands.push("eslint");
-        if (pkg.devDependencies.prettier || pkg.dependencies.prettier) commands.push("prettier");
+        if (pkg.devDependencies.vitest || pkg.dependencies.vitest)
+          commands.push("vitest");
+        if (pkg.devDependencies.jest || pkg.dependencies.jest)
+          commands.push("jest");
+        if (pkg.devDependencies.eslint || pkg.dependencies.eslint)
+          commands.push("eslint");
+        if (pkg.devDependencies.prettier || pkg.dependencies.prettier)
+          commands.push("prettier");
       }
     }
 
@@ -104,7 +127,10 @@ function detectCommands(cwd) {
     }
 
     // Docker
-    if (fs.existsSync(path.join(cwd, "Dockerfile")) || fs.existsSync(path.join(cwd, "docker-compose.yml"))) {
+    if (
+      fs.existsSync(path.join(cwd, "Dockerfile")) ||
+      fs.existsSync(path.join(cwd, "docker-compose.yml"))
+    ) {
       commands.push("docker");
     }
   } catch {
@@ -123,7 +149,10 @@ function getGitInfo(cwd) {
     execSync("git rev-parse --git-dir", { cwd, stdio: "ignore" });
 
     // Get last 3 commits
-    const log = execSync("git log -3 --format=\"%h %s (%cr)\"", { cwd, encoding: "utf8" });
+    const log = execSync('git log -3 --format="%h %s (%cr)"', {
+      cwd,
+      encoding: "utf8",
+    });
     const commits = log.trim().split("\n");
 
     return { repo: true, commits };
@@ -155,10 +184,10 @@ function checkMemory(cwd) {
   for (const memDir of memoryDirs) {
     if (fs.existsSync(memDir)) {
       try {
-        const files = fs.readdirSync(memDir).filter(f => f.endsWith(".md"));
+        const files = fs.readdirSync(memDir).filter((f) => f.endsWith(".md"));
         if (files.length > 0) {
           // Get most recent files by mtime
-          const withStats = files.map(f => ({
+          const withStats = files.map((f) => ({
             name: f,
             mtime: fs.statSync(path.join(memDir, f)).mtime,
             path: path.join(memDir, f),
@@ -167,8 +196,15 @@ function checkMemory(cwd) {
 
           // Return top 3 most recent
           for (const item of withStats.slice(0, 3)) {
-            const daysAgo = Math.floor((Date.now() - item.mtime) / (1000 * 60 * 60 * 24));
-            const ageStr = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
+            const daysAgo = Math.floor(
+              (Date.now() - item.mtime) / (1000 * 60 * 60 * 24),
+            );
+            const ageStr =
+              daysAgo === 0
+                ? "today"
+                : daysAgo === 1
+                  ? "yesterday"
+                  : `${daysAgo} days ago`;
             found.push({ name: item.name, age: ageStr, path: item.path });
           }
         }
@@ -187,7 +223,8 @@ function checkMemory(cwd) {
 function extractMemorySnippets(memories) {
   const snippets = [];
 
-  for (const mem of memories.slice(0, 2)) { // Only read top 2
+  for (const mem of memories.slice(0, 2)) {
+    // Only read top 2
     try {
       const content = fs.readFileSync(mem.path, "utf8");
       const lines = content.split("\n");
@@ -196,8 +233,14 @@ function extractMemorySnippets(memories) {
       let count = 0;
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.length > 15 && !trimmed.startsWith("#") && !trimmed.startsWith(">")) {
-          snippets.push(`  ${trimmed.slice(0, 80)}${trimmed.length > 80 ? "..." : ""}`);
+        if (
+          trimmed.length > 15 &&
+          !trimmed.startsWith("#") &&
+          !trimmed.startsWith(">")
+        ) {
+          snippets.push(
+            `  ${trimmed.slice(0, 80)}${trimmed.length > 80 ? "..." : ""}`,
+          );
           count++;
           if (count >= 2) break;
         }
@@ -208,6 +251,74 @@ function extractMemorySnippets(memories) {
   }
 
   return snippets;
+}
+
+/**
+ * Find the project's memory directory under ~/.claude/projects/
+ * Matches cwd to the correct project directory by normalizing the path.
+ */
+function findProjectMemoryDir(cwd) {
+  const home = process.env.USERPROFILE || process.env.HOME;
+  const projectsDir = path.join(home, ".claude", "projects");
+  if (!fs.existsSync(projectsDir)) return null;
+
+  // Normalize cwd to match directory naming: D:\Quant\Foo -> D--Quant-Foo
+  const cwdNormalized = cwd
+    .replace(/\\/g, "-")
+    .replace(/:/g, "")
+    .replace(/\/$/, "");
+  const directMatch = path.join(projectsDir, cwdNormalized, "memory");
+  if (fs.existsSync(directMatch)) return directMatch;
+
+  // Fallback: case-insensitive match
+  const cwdLower = cwdNormalized.toLowerCase();
+  try {
+    const dirs = fs.readdirSync(projectsDir);
+    for (const dir of dirs) {
+      if (dir.toLowerCase() === cwdLower) {
+        const memDir = path.join(projectsDir, dir, "memory");
+        if (fs.existsSync(memDir)) return memDir;
+      }
+    }
+  } catch {
+    /* silent */
+  }
+  return null;
+}
+
+/**
+ * Auto-initialize MEMORY.md if the memory directory exists but lacks it.
+ * Returns true if a new file was created, false otherwise.
+ */
+function ensureMemoryInit(memoryDir) {
+  if (!memoryDir) return false;
+  const memoryMd = path.join(memoryDir, "MEMORY.md");
+  if (fs.existsSync(memoryMd)) return false;
+
+  const projectName = path
+    .basename(path.dirname(memoryDir))
+    .replace(/^D--/, "")
+    .replace(/-/g, "/");
+
+  const template = [
+    `# ${projectName} Memory`,
+    "",
+    "## Active Context",
+    "_No active context yet._",
+    "",
+    "## Wings",
+    "| Wing | Items | Last Updated |",
+    "|------|-------|-------------|",
+    "_(no wings yet)_",
+    "",
+  ].join("\n");
+
+  try {
+    fs.writeFileSync(memoryMd, template, "utf8");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -225,7 +336,10 @@ function findMemoryPalaceDir(cwd) {
       const memoryDir = path.join(claudeProjectsDir, dir, "memory");
       if (fs.existsSync(path.join(memoryDir, "wings"))) {
         // Check if project hash matches cwd
-        if (cwdLower.includes(dir.split("-").pop().toLowerCase()) || dir.includes("D--Quant")) {
+        if (
+          cwdLower.includes(dir.split("-").pop().toLowerCase()) ||
+          dir.includes("D--Quant")
+        ) {
           return memoryDir;
         }
       }
@@ -237,7 +351,9 @@ function findMemoryPalaceDir(cwd) {
         return memoryDir;
       }
     }
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
   return null;
 }
 
@@ -256,19 +372,25 @@ function extractTopFacts(factsPath, maxCount) {
       if (lines.length === 0) continue;
 
       const title = lines[0].trim();
-      const isCritical = section.includes("★") || section.includes("Status: critical");
+      const isCritical =
+        section.includes("★") || section.includes("Status: critical");
       const dateMatch = section.match(/\*\*Date\*\*:\s*(\d{4}-\d{2}-\d{2})/);
       const date = dateMatch ? dateMatch[1] : "0000-00-00";
 
       // Skip title line (lines[0]), then filter metadata and empty lines
-      const contentLines = lines.slice(1).filter(
-        (l) => {
-          const trimmed = l.trim();
-          return !trimmed.startsWith("- **Date**") && !trimmed.startsWith("- **Status**") && trimmed.length > 5;
-        }
-      );
+      const contentLines = lines.slice(1).filter((l) => {
+        const trimmed = l.trim();
+        return (
+          !trimmed.startsWith("- **Date**") &&
+          !trimmed.startsWith("- **Status**") &&
+          trimmed.length > 5
+        );
+      });
       const summary = contentLines[0]
-        ? contentLines[0].trim().replace(/^[-*]\s*/, "").slice(0, 80)
+        ? contentLines[0]
+            .trim()
+            .replace(/^[-*]\s*/, "")
+            .slice(0, 80)
         : title;
 
       facts.push({ title, summary, isCritical, date });
@@ -279,9 +401,9 @@ function extractTopFacts(factsPath, maxCount) {
       return b.date.localeCompare(a.date);
     });
 
-    return facts.slice(0, maxCount).map((f) =>
-      `${f.isCritical ? "★" : " "} ${f.summary}`
-    );
+    return facts
+      .slice(0, maxCount)
+      .map((f) => `${f.isCritical ? "★" : " "} ${f.summary}`);
   } catch {
     return [];
   }
@@ -301,10 +423,15 @@ function loadMemoryPalace(cwd, palaceDir) {
     const entries = fs.readdirSync(wingsDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.name.startsWith("_")) {
-        wingDirs.push({ name: entry.name, path: path.join(wingsDir, entry.name) });
+        wingDirs.push({
+          name: entry.name,
+          path: path.join(wingsDir, entry.name),
+        });
       }
     }
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 
   // Build search text: cwd + wing names + CLAUDE.md content
   const cwdParts = cwd.replace(/\\/g, "/").split("/");
@@ -316,13 +443,13 @@ function loadMemoryPalace(cwd, palaceDir) {
     const d = i === 0 ? cwd : path.resolve(cwd, ...Array(i).fill(".."));
     const md = path.join(d, "CLAUDE.md");
     if (fs.existsSync(md)) {
-      try { searchParts.push(fs.readFileSync(md, "utf8").toLowerCase()); } catch {}
+      try {
+        searchParts.push(fs.readFileSync(md, "utf8").toLowerCase());
+      } catch {}
       break;
     }
   }
   const searchText = searchParts.join(" ");
-  // DEBUG
-  // Match wings by keywords from README.md
 
   // Match wings by keywords from README.md
   const matchedWings = [];
@@ -333,20 +460,29 @@ function loadMemoryPalace(cwd, palaceDir) {
       const readme = fs.readFileSync(readmePath, "utf8");
       const kwMatch = readme.match(/## Keywords[^\n]*\n(.+)/i);
       if (kwMatch) {
-        const keywords = kwMatch[1].toLowerCase().split(",").map((k) => k.trim());
-        const matchCount = keywords.filter((kw) => searchText.includes(kw)).length;
+        const keywords = kwMatch[1]
+          .toLowerCase()
+          .split(",")
+          .map((k) => k.trim());
+        const matchCount = keywords.filter((kw) =>
+          searchText.includes(kw),
+        ).length;
         if (matchCount > 0) {
           matchedWings.push({ ...wing, matchCount });
         }
       }
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }
 
   matchedWings.sort((a, b) => b.matchCount - a.matchCount);
   const topWings = matchedWings.slice(0, 2);
 
   if (topWings.length === 0) {
-    output.push(`  Wings: ${wingDirs.length} available (none matched current project)`);
+    output.push(
+      `  Wings: ${wingDirs.length} available (none matched current project)`,
+    );
     return output;
   }
 
@@ -403,6 +539,10 @@ async function main() {
 
   const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
+  // Auto-initialize MEMORY.md for this project
+  const memDir = findProjectMemoryDir(cwd);
+  const memoryInit = ensureMemoryInit(memDir);
+
   // 1. Check services
   const nadirclaw = await fetchJSON("http://localhost:8856/health");
   const vllm = await fetchJSON("http://localhost:8000/v1/models");
@@ -414,7 +554,9 @@ async function main() {
   // Service status
   lines.push("[Services]");
   if (nadirclaw?.status === "ok") {
-    lines.push(`  NadirClaw: OK (v${nadirclaw.version}, simple=${nadirclaw.simple_model})`);
+    lines.push(
+      `  NadirClaw: OK (v${nadirclaw.version}, simple=${nadirclaw.simple_model})`,
+    );
   } else {
     lines.push("  NadirClaw: NOT RUNNING - run: nadirclaw serve --verbose");
   }
@@ -462,21 +604,29 @@ async function main() {
   const gitInfo = getGitInfo(cwd);
   if (gitInfo.repo && gitInfo.commits.length > 0) {
     lines.push("  Recent commits:");
-    gitInfo.commits.slice(0, 3).forEach(commit => {
+    gitInfo.commits.slice(0, 3).forEach((commit) => {
       lines.push(`    ${commit}`);
     });
   }
 
-  // Memory check — Memory Palace L2 recall
-  const palaceDir = findMemoryPalaceDir(cwd);
-  if (palaceDir) {
-    const palaceOutput = loadMemoryPalace(cwd, palaceDir);
-    lines.push("  Memory Palace: ✓");
-    for (const line of palaceOutput) {
-      lines.push(line);
+  // Memory status
+  if (memDir) {
+    const palaceDir = findMemoryPalaceDir(cwd);
+    if (palaceDir) {
+      const palaceOutput = loadMemoryPalace(cwd, palaceDir);
+      lines.push(
+        `  Memory: ✓${memoryInit ? " (MEMORY.md auto-initialized)" : ""}`,
+      );
+      for (const line of palaceOutput) {
+        lines.push(line);
+      }
+    } else {
+      lines.push(
+        `  Memory: ✓${memoryInit ? " (MEMORY.md auto-initialized)" : ""}`,
+      );
     }
   } else {
-    lines.push("  Memory Palace: not set up");
+    lines.push("  Memory: not set up");
   }
 
   // Available commands
@@ -501,10 +651,12 @@ async function main() {
     const cachePath = path.join(
       process.env.USERPROFILE || process.env.HOME,
       ".claude",
-      ".session-health-cache.json"
+      ".session-health-cache.json",
     );
     fs.writeFileSync(cachePath, JSON.stringify(healthCache), "utf8");
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 main().catch(() => {});

@@ -18,3 +18,7 @@ Persist state as it happens, not at context boundaries:
 - Before starting complex work, write current progress and next steps to
   .claude/plan.md so that context loss from /compact or session restart does not
   reset progress
+
+## CLAUDE.md Generation Rules
+
+When generating or updating any project's CLAUDE.md file (via `/init`, `/plan-project`, or manual), always include the Collaboration Principles section above. If the file already exists and lacks it, append it.

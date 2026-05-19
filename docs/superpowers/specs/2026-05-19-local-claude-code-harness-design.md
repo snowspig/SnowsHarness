@@ -120,9 +120,19 @@ If unsure where a file belongs, ask before creating it.
 
 ### 1.3 code-review.md (~150 tokens)
 
-Code review triage matrix — Blocker / High-Priority / Medium-Priority / Nitpick classification with evidence-based feedback.
+```markdown
+## Code Review Standards
 
-(Details to be extracted from Everything-You-Need-to-Know repo's code reviewer framework.)
+When reviewing code, classify every finding by severity:
+
+- **Blocker**: Will cause failures in production (security holes, data loss, crashes)
+- **High**: Likely to cause problems soon (race conditions, missing error handling)
+- **Medium**: Should be fixed but not urgent (code smells, missing tests, naming)
+- **Nitpick**: Style preferences, minor readability improvements
+
+Every finding must include: file path, line number, what's wrong, why it matters,
+and a suggested fix. No finding without evidence.
+```
 
 ### 1.4 harness-quality.md (~100 tokens)
 
@@ -179,56 +189,46 @@ Remove components that no longer provide value — fewer moving parts = fewer fa
 
 ### 2.3 Hook Config in settings.json
 
-New hooks entries to add to `settings.json` hooks section:
+New hooks entries to merge into `settings.json` hooks section. Uses the same format as existing hooks:
 
 ```json
 {
-  "PreToolUse": [
-    {
-      "matcher": "Write|Edit",
-      "hooks": [
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/action-guard.js" },
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/config-protection.js" }
-      ]
-    },
-    {
-      "matcher": "Edit",
-      "hooks": [
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/change-safety.js" }
-      ]
-    }
-  ],
-  "PostToolUse": [
-    {
-      "matcher": "Write|Edit",
-      "hooks": [
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/secret-detect.js" },
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/post-write-verify.js" }
-      ]
-    },
-    {
-      "matcher": "",
-      "hooks": [
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/suggest-compact.js" }
-      ]
-    },
-    {
-      "matcher": "Read|Grep|Glob|Bash",
-      "hooks": [
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/output-size-warning.js" }
-      ]
-    }
-  ],
-  "Stop": [
-    {
-      "matcher": "",
-      "hooks": [
-        { "type": "command", "command": "node C:/Users/Tao/.claude/hooks/batch-format.js" }
-      ]
-    }
-  ]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "node",
+        "args": ["C:/Users/Tao/.claude/hooks/config-protection.js"],
+        "description": "Block modifications to tool config files (eslint, prettier, tsconfig, etc.)"
+      },
+      {
+        "matcher": "Edit",
+        "command": "node",
+        "args": ["C:/Users/Tao/.claude/hooks/change-safety.js"],
+        "description": "Prevent edits based on stale context that overwrite recent changes"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "command": "node",
+        "args": ["C:/Users/Tao/.claude/hooks/suggest-compact.js"],
+        "description": "Suggest /compact after 80+ tool calls at logical boundaries"
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "command": "node",
+        "args": ["C:/Users/Tao/.claude/hooks/batch-format.js"],
+        "description": "Batch format all files written during the session"
+      }
+    ]
+  }
 }
 ```
+
+Note: This merges with existing hooks. Existing PreToolUse/PostToolUse entries (action-guard, secret-detect, post-write-verify, output-size-warning) remain unchanged.
 
 ---
 

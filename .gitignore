@@ -1,0 +1,27 @@
+# Sensitive — never commit
+settings.json
+*.key
+*.pem
+.env
+
+# Reference repos (large, cloned separately)
+references/
+
+# Temp files
+tmp/
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Test artifacts
+test-integration.js

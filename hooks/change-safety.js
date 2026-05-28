@@ -12,10 +12,18 @@ const fs = require("fs");
 
 function main() {
   let input = "";
-  try { input = fs.readFileSync(0, "utf8"); } catch { return; }
+  try {
+    input = fs.readFileSync(0, "utf8");
+  } catch {
+    return;
+  }
 
   let toolInput;
-  try { toolInput = JSON.parse(input); } catch { return; }
+  try {
+    toolInput = JSON.parse(input);
+  } catch {
+    return;
+  }
 
   if (toolInput.tool_name !== "Edit") return;
 
@@ -31,11 +39,19 @@ function main() {
     return; // File doesn't exist yet — that's fine for new files
   }
 
-  if (!currentContent.includes(oldString)) {
-    console.error(`[CHANGE SAFETY] Edit old_string does not match current file content.`);
+  // Normalize line endings: both file content and old_string to LF
+  const normalizedContent = currentContent.replace(/\r\n/g, "\n");
+  const normalizedOld = oldString.replace(/\r\n/g, "\n");
+
+  if (!normalizedContent.includes(normalizedOld)) {
+    console.error(
+      `[CHANGE SAFETY] Edit old_string does not match current file content.`,
+    );
     console.error(`File: ${filePath}`);
     console.error(`The file may have changed since it was last read.`);
-    console.error(`Action: Read the file first, then retry the edit with the current content.`);
+    console.error(
+      `Action: Read the file first, then retry the edit with the current content.`,
+    );
     process.exit(2);
   }
 }

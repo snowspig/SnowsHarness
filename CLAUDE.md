@@ -60,18 +60,20 @@ Markdown agent definitions with YAML frontmatter (name, description, tools, mode
 
 Two-tier model architecture routed through SnowsRouter (ppchat proxy):
 
-| Role | Model | Config Location | Purpose |
-|------|-------|----------------|---------|
-| **Main conversation** | Classifier (auto) | `ANTHROPIC_MODEL: "auto"` | SnowsRouter classifies and assigns the optimal model |
-| **Workers** | `glm-5.1` | Agent `model:` YAML field | Code implementation, data analysis, testing, debugging |
-| **Fast mode** | `glm-5.1` | `ANTHROPIC_SMALL_FAST_MODEL` | Quick operations, fast mode |
+| Role                  | Model             | Config Location                | Purpose                                                |
+| --------------------- | ----------------- | ------------------------------ | ------------------------------------------------------ |
+| **Main conversation** | Classifier        | `ANTHROPIC_MODEL: "Classifier"` | SnowsRouter classifies and assigns the optimal model  |
+| **Subagents**         | `glm-5.1`         | `CLAUDE_CODE_SUBAGENT_MODEL`   | All spawned agents default to GLM 5.1                 |
+| **Fast mode**         | `glm-5.1`         | `ANTHROPIC_SMALL_FAST_MODEL`   | Quick operations, fast mode                            |
 
-`ANTHROPIC_MODEL` is set to `"auto"` — SnowsRouter at `ANTHROPIC_BASE_URL` handles model classification and routing. Do not hardcode a specific model here, as it bypasses the router's cost optimization.
+`ANTHROPIC_MODEL` must be `"Classifier"` — this triggers SnowsRouter's model classification at `ANTHROPIC_BASE_URL`. Do not change to `"auto"` or a specific model name, as both bypass the router.
 
 **Orchestrator agents** (SnowsRouter assigns model):
+
 - `quant-coordinator` — team lead, dispatches and synthesizes (`model: opus`)
 
 **Worker agents** (run on GLM 5.1):
+
 - `planner`, `code-reviewer`, `debugger`, `test-runner`
 - `docs-generator`, `build-error-resolver`, `security-reviewer`
 - `quant-data-analyst`, `quant-strategy-researcher`, `quant-risk-analyst`

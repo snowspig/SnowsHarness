@@ -60,11 +60,11 @@ Markdown agent definitions with YAML frontmatter (name, description, tools, mode
 
 Two-tier model architecture routed through SnowsRouter (ppchat proxy):
 
-| Role                  | Model             | Config Location                | Purpose                                                |
-| --------------------- | ----------------- | ------------------------------ | ------------------------------------------------------ |
-| **Main conversation** | Classifier        | `ANTHROPIC_MODEL: "Classifier"` | SnowsRouter classifies and assigns the optimal model  |
-| **Subagents**         | `glm-5.1`         | `CLAUDE_CODE_SUBAGENT_MODEL`   | All spawned agents default to GLM 5.1                 |
-| **Fast mode**         | `glm-5.1`         | `ANTHROPIC_SMALL_FAST_MODEL`   | Quick operations, fast mode                            |
+| Role                  | Model      | Config Location                 | Purpose                                              |
+| --------------------- | ---------- | ------------------------------- | ---------------------------------------------------- |
+| **Main conversation** | Classifier | `ANTHROPIC_MODEL: "Classifier"` | SnowsRouter classifies and assigns the optimal model |
+| **Subagents**         | Classifier | `CLAUDE_CODE_SUBAGENT_MODEL`    | SnowsRouter assigns optimal model for each subagent  |
+| **Fast mode**         | `glm-5.1`  | `ANTHROPIC_SMALL_FAST_MODEL`    | Quick operations, fast mode                          |
 
 `ANTHROPIC_MODEL` must be `"Classifier"` — this triggers SnowsRouter's model classification at `ANTHROPIC_BASE_URL`. Do not change to `"auto"` or a specific model name, as both bypass the router.
 

@@ -90,8 +90,10 @@ foreach ($comp in $Components) {
 
         $shouldCopy = $false
         if ((Test-Path $destPath)) {
-            $srcHash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash
-            $destHash = (Get-FileHash $destPath -Algorithm SHA256).Hash
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            $srcHash = [BitConverter]::ToString($sha.ComputeHash([System.IO.File]::ReadAllBytes($file.FullName))) -replace '-',''
+            $destHash = [BitConverter]::ToString($sha.ComputeHash([System.IO.File]::ReadAllBytes($destPath))) -replace '-',''
+            $sha.Dispose()
             if ($srcHash -ne $destHash) {
                 if ($Force) {
                     $shouldCopy = $true
@@ -158,8 +160,9 @@ if (Test-Path $TemplateSettings) {
             }
         }
 
-        # Write back
-        $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
+        # Write back (UTF8 without BOM)
+        $jsonOutput = $settings | ConvertTo-Json -Depth 10
+        [System.IO.File]::WriteAllText($SettingsFile, $jsonOutput, [System.Text.UTF8Encoding]::new($false))
         Write-Ok "settings.json hooks merged"
     }
 }

@@ -6,7 +6,7 @@ tools:
   - Glob
   - Grep
   - Bash
-model: sonnet
+model: glm-5.1
 ---
 
 # Test Runner

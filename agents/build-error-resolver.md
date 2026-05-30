@@ -8,7 +8,7 @@ tools:
   - Bash
   - Write
   - Edit
-model: sonnet
+model: glm-5.1
 ---
 
 # Build Error Resolver

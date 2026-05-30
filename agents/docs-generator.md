@@ -8,7 +8,7 @@ tools:
   - Bash
   - Write
   - Edit
-model: sonnet
+model: glm-5.1
 ---
 
 # Documentation Generator
@@ -32,7 +32,7 @@ Analyzes code and generates appropriate documentation.
 
 ## Rules
 
-- Only modify documentation files (*.md) and docstrings
+- Only modify documentation files (\*.md) and docstrings
 - Never change logic or behavior
 - Match existing documentation style and conventions
 - Don't document obvious code — focus on public APIs and non-obvious behavior

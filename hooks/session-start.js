@@ -264,9 +264,7 @@ function findProjectMemoryDir(cwd) {
   if (!fs.existsSync(projectsDir)) return null;
 
   // Normalize cwd to match Claude Code's directory naming convention
-  const cwdNormalized = cwd
-    .replace(/[\\/]/g, "-")
-    .replace(/\/$/, "");
+  const cwdNormalized = cwd.replace(/[\\/]/g, "-").replace(/\/$/, "");
   const directMatch = path.join(projectsDir, cwdNormalized, "memory");
   if (fs.existsSync(directMatch)) return directMatch;
 
@@ -308,13 +306,51 @@ function ensureMemoryInit(memoryDir) {
     "_No active context yet._",
     "",
     "## Wings",
-    "| Wing | Items | Last Updated |",
-    "|------|-------|-------------|",
+    "| Wing | Entries | Last Updated | Keywords |",
+    "|------|---------|--------------|----------|",
     "_(no wings yet)_",
     "",
   ].join("\n");
 
   try {
+    // Create wings/ and _meta/ directories
+    const wingsDir = path.join(memoryDir, "wings");
+    const metaDir = path.join(memoryDir, "_meta");
+    fs.mkdirSync(wingsDir, { recursive: true });
+    fs.mkdirSync(metaDir, { recursive: true });
+
+    // Create _template.md
+    const templateWing = [
+      "# Wing: <name>",
+      "",
+      "## Keywords",
+      "keyword1, keyword2",
+      "",
+      "## Summary",
+      "_Brief description of this wing's purpose._",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(wingsDir, "_template.md"), templateWing, "utf8");
+
+    // Create identity.md (L0)
+    const identity = [
+      "# Identity",
+      "",
+      "_Who you are, your role, and global preferences._",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(memoryDir, "identity.md"), identity, "utf8");
+
+    // Create _meta/changelog.md
+    const changelog = [
+      "# Memory Changelog",
+      "",
+      `## ${new Date().toISOString().split("T")[0]}`,
+      "- Memory Palace initialized",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(metaDir, "changelog.md"), changelog, "utf8");
+
     fs.writeFileSync(memoryMd, template, "utf8");
     return true;
   } catch {
@@ -337,11 +373,11 @@ function findMemoryPalaceDir(cwd) {
       const memoryDir = path.join(claudeProjectsDir, dir, "memory");
       if (fs.existsSync(path.join(memoryDir, "wings"))) {
         // Check if project hash matches cwd
-        const dirSlug = dir.toLowerCase().replace(/^[a-z]--/, "").replace(/^-/, "");
-        if (
-          cwdLower.includes(dirSlug) ||
-          dir.toLowerCase().includes("quant")
-        ) {
+        const dirSlug = dir
+          .toLowerCase()
+          .replace(/^[a-z]--/, "")
+          .replace(/^-/, "");
+        if (cwdLower.includes(dirSlug) || dir.toLowerCase().includes("quant")) {
           return memoryDir;
         }
       }
@@ -409,6 +445,61 @@ function extractTopFacts(factsPath, maxCount) {
   } catch {
     return [];
   }
+}
+
+/**
+ * Memory Palace — load L0 identity and L1 index
+ * Returns structured output lines for session injection (~600 token budget)
+ */
+function loadL0L1(palaceDir) {
+  const output = [];
+
+  // L0: identity.md (user identity, global preferences)
+  const identityPath = path.join(palaceDir, "identity.md");
+  if (fs.existsSync(identityPath)) {
+    try {
+      const content = fs.readFileSync(identityPath, "utf8").trim();
+      if (content) {
+        output.push("  [Identity]");
+        // Extract non-empty, non-heading lines (compact L0)
+        const lines = content
+          .split("\n")
+          .filter((l) => l.trim() && !l.startsWith("#"));
+        for (const line of lines.slice(0, 6)) {
+          output.push(`    ${line.replace(/^- /, "").trim()}`);
+        }
+      }
+    } catch {
+      /* silent */
+    }
+  }
+
+  // L1: MEMORY.md active context entries (★ marked)
+  const memoryMdPath = path.join(palaceDir, "MEMORY.md");
+  if (fs.existsSync(memoryMdPath)) {
+    try {
+      const content = fs.readFileSync(memoryMdPath, "utf8");
+      const activeSection = content.match(
+        /## Active Context\n([\s\S]*?)(?=\n## |$)/,
+      );
+      if (activeSection) {
+        const starLines = activeSection[1]
+          .split("\n")
+          .filter((l) => l.trim().startsWith("- ★"))
+          .map((l) => l.trim().replace(/^- ★ /, ""));
+        if (starLines.length > 0) {
+          output.push("  [Active Memory]");
+          for (const line of starLines.slice(0, 5)) {
+            output.push(`    ★ ${line}`);
+          }
+        }
+      }
+    } catch {
+      /* silent */
+    }
+  }
+
+  return output;
 }
 
 /**
@@ -570,7 +661,9 @@ async function main() {
 
   if (vllm?.data?.length > 0) {
     const model = vllm.data[0];
-    lines.push(`  vLLM: ${model.id} (${model.max_model_len} ctx) @ 192.168.8.227`);
+    lines.push(
+      `  vLLM: ${model.id} (${model.max_model_len} ctx) @ 192.168.8.227`,
+    );
   } else {
     lines.push("  vLLM: NOT RUNNING - check 192.168.8.227:8000");
   }
@@ -616,14 +709,20 @@ async function main() {
     });
   }
 
-  // Memory status
+  // Memory status (L0+L1+L2 injection)
   if (memDir) {
     const palaceDir = findMemoryPalaceDir(cwd);
     if (palaceDir) {
-      const palaceOutput = loadMemoryPalace(cwd, palaceDir);
+      // L0+L1: identity and active context
+      const l0l1 = loadL0L1(palaceDir);
       lines.push(
         `  Memory: ✓${memoryInit ? " (MEMORY.md auto-initialized)" : ""}`,
       );
+      for (const line of l0l1) {
+        lines.push(line);
+      }
+      // L2: matched wing context
+      const palaceOutput = loadMemoryPalace(cwd, palaceDir);
       for (const line of palaceOutput) {
         lines.push(line);
       }

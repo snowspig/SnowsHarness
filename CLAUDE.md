@@ -45,19 +45,36 @@ Node.js scripts triggered by Claude Code lifecycle events:
 
 - **PreToolUse**: `action-guard` (warns on destructive ops), `config-protection` (blocks linter config weakening), `change-safety` (prevents stale-context edits)
 - **PostToolUse**: `secret-detect`, `output-size-warning`, `post-write-verify`, `track-written-files`, `suggest-compact`
-- **SessionStart**: `session-start` (environment status, project detection, memory auto-init), `project-context`
+- **SessionStart**: `session-start` (environment status, project detection, L0+L1 memory injection), `project-context`
+- **PreCompact**: `memory-emergency-save` (saves insights before context compression)
 - **Stop**: `batch-format` (runs prettier/ruff on all modified files)
-- **SessionEnd**: `session-end`, `session-learner`
+- **SessionEnd**: `session-end`, `session-learner` (mines debug/decision patterns → Memory Palace)
 
 Hook data flows:
 
 - `track-written-files` → writes temp file → `batch-format` reads it at Stop time
 - `session-start` → writes `.session-health-cache.json` → `session-end` reads it
-- `session-start` → auto-creates `MEMORY.md` in `~/.claude/projects/<project>/memory/` if missing
+- `session-start` → auto-creates `MEMORY.md` + wing structure in `~/.claude/projects/<project>/memory/`
+- `session-start` → injects L0 (identity.md) and L1 (MEMORY.md active context) into workspace briefing
+- `session-learner` → mines session patterns → writes to `wings/<wing>/facts.md` or `preferences.md`
+- `memory-emergency-save` → scans conversation before compaction → saves unsaved decisions
+
+### Memory Palace (persistent cross-session memory)
+
+A 4-layer memory system inspired by [MemPalace](https://github.com/MemPalace/mempalace), integrated directly into the harness without external dependencies:
+
+| Layer | Content | Location | Loaded |
+|-------|---------|----------|--------|
+| **L0** | User identity, global preferences | `identity.md` | Every session start |
+| **L1** | Active context, ★ critical facts | `MEMORY.md` | Every session start |
+| **L2** | Wing-level facts, events, preferences | `wings/<wing>/*.md` | Keyword-matched at session start |
+| **L3** | Full deep memory | All wing files | On demand via `/memory` |
+
+Wings are topic-organized directories (e.g., `snowsrouter/`, `quant/`, `devops/`) with typed files: `facts.md`, `events.md`, `preferences.md`. The `session-learner` hook auto-populates wings from session patterns; `/memory save` allows manual checkpoints.
 
 ### Commands (on-demand workflows)
 
-Slash commands loaded only when invoked: `/harness-check`, `/health-check`, `/review`, `/build-fix`, `/commit-push-pr`, `/context-audit`, `/plan-project`.
+Slash commands loaded only when invoked: `/harness-check`, `/health-check`, `/review`, `/build-fix`, `/commit-push-pr`, `/context-audit`, `/plan-project`, `/memory`.
 
 ### Agents (specialized subagents)
 

@@ -7,8 +7,9 @@
 
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
-const HOME = process.env.USERPROFILE || process.env.HOME;
+const HOME = os.homedir();
 
 const PROJECT_RULES = [
   {
@@ -20,11 +21,11 @@ const PROJECT_RULES = [
     ],
   },
   {
-    match: /nadirclaw|\.nadirclaw/i,
+    match: /snowsrouter|ppchat/i,
     context: [
-      "NadirClaw dev environment",
-      "Config: ~/.nadirclaw/.env",
-      "Test: curl http://localhost:8856/health",
+      "SnowsRouter (deployed on OpenWrt at 192.168.8.1:8856)",
+      "No local config — Claude Code points to router via ANTHROPIC_BASE_URL",
+      "Test: curl -s -o /dev/null -w '%{http_code}' http://192.168.8.1:8856/",
     ],
   },
   {

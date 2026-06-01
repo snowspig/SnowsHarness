@@ -33,9 +33,9 @@ const BLOCKED_PATTERNS = [
 
 const ALLOWED_PATTERNS = [
   /CLAUDE\.md$/i,
-  /\\.claude[\\/]/,
-  /memory[\\/]/,
-  /\\.claude\\.md$/i,
+  /[\\/]\.claude[\\/]/,
+  /[\\/]memory[\\/]/,
+  /\.claude\.md$/i,
 ];
 
 function isBlocked(filePath) {

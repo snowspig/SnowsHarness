@@ -19,7 +19,7 @@ const SESSION_LOG = path.join(os.homedir(), '.claude', 'session-log.jsonl');
 const TELEMETRY_LOG = path.join(os.homedir(), '.claude', 'session-telemetry.jsonl');
 // Replace hardcoded project path with dynamic detection
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const projectSlug = projectDir.replace(/[:\\\/]/g, "-").replace(/^-+/, "");
+const projectSlug = projectDir.replace(/[\\/]/g, "-").replace(/^-+/, "").replace(/\/$/, "");
 const MEMORY_DIR = path.join(os.homedir(), '.claude', 'projects', projectSlug, 'memory');
 const LEARNER_LOG = path.join(os.homedir(), '.claude', '.learner-log.jsonl');
 
@@ -133,7 +133,7 @@ function applyQualityGate(pattern) {
   if (genericPaths.some(p => fp.includes(p))) return null;
 
   // Require codebase-specific file
-  if (fp && !fp.startsWith('D:') && !fp.includes(os.homedir())) return null;
+  if (fp && !fp.includes(os.homedir())) return null;
 
   return pattern;
 }
@@ -179,7 +179,7 @@ function formatFact(pattern) {
 
 function guessWing(filePath) {
   const fp = filePath.toLowerCase();
-  if (fp.includes('nadirclaw') || fp.includes('routing') || fp.includes('litellm')) return 'nadirclaw';
+  if (fp.includes('snowsrouter') || fp.includes('routing') || fp.includes('ppchat')) return 'snowsrouter';
   if (fp.includes('qlib') || fp.includes('xtquant') || fp.includes('quantbox') || fp.includes('factor')) return 'quant';
   if (fp.includes('.claude') || fp.includes('hook') || fp.includes('memory')) return 'claude-code';
   if (fp.includes('docker') || fp.includes('deploy') || fp.includes('nginx')) return 'devops';

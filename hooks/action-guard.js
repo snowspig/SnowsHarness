@@ -89,12 +89,11 @@ function isSensitiveFile(filePath) {
   }
 
   // Check full path for common sensitive locations
-  const lowerPath = filePath.toLowerCase();
+  const normalizedPath = filePath.toLowerCase().replace(/\\/g, "/");
   if (
-    lowerPath.includes("\\.nadirclaw\\") ||
-    lowerPath.includes("\\.claude\\") ||
-    lowerPath.includes("credentials") ||
-    lowerPath.includes("secrets")
+    normalizedPath.includes("/.claude/") ||
+    normalizedPath.includes("credentials") ||
+    normalizedPath.includes("secrets")
   ) {
     return { sensitive: true, reason: "In sensitive directory location" };
   }

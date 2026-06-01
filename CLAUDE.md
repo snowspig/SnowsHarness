@@ -4,16 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-SnowsHarness is a **Claude Code configuration harness** — a portable, deployable set of rules, hooks, commands, and agents that enhances Claude Code's behavior. It deploys to `~/.claude/` via `deploy.ps1`.
+SnowsHarness is a **Claude Code configuration harness** — a portable, deployable set of rules, hooks, commands, and agents that enhances Claude Code's behavior. It deploys to `~/.claude/` via platform-specific deploy scripts.
 
 ## Deploying
 
+**Windows (PowerShell):**
 ```powershell
 .\deploy.ps1 -DryRun    # Preview what will change
 .\deploy.ps1 -Force     # Deploy without prompts
 ```
 
-The deploy script copies hooks, rules, commands, and agents into `~/.claude/`, then **merges** hook registrations into the existing `settings.json` (preserves env vars, permissions, and plugins).
+**Linux/macOS (Bash):**
+```bash
+./deploy.sh --dry-run    # Preview what will change
+./deploy.sh --force      # Deploy without prompts
+```
+
+The deploy script copies hooks, rules, commands, and agents into `~/.claude/`, then **merges** hook registrations into the existing `settings.json` (preserves env vars, permissions, and plugins). On Linux/macOS, `CLAUDE_CODE_USE_POWERSHELL_TOOL` is automatically set to `"0"`.
 
 **Do not commit `settings.json`** — it contains API keys. Use `settings.template.json` as the reference.
 
@@ -58,7 +65,7 @@ Markdown agent definitions with YAML frontmatter (name, description, tools, mode
 
 ## Model Routing
 
-Two-tier model architecture routed through SnowsRouter (ppchat proxy):
+Two-tier model architecture routed through SnowsRouter (deployed on OpenWrt at `192.168.8.1:8856`):
 
 | Role                  | Model      | Config Location                 | Purpose                                              |
 | --------------------- | ---------- | ------------------------------- | ---------------------------------------------------- |
@@ -86,6 +93,10 @@ Two-tier model architecture routed through SnowsRouter (ppchat proxy):
 - `settings.template.json` is the authoritative reference for hook registrations and config structure. The deploy script merges hooks from this template into the live `settings.json`.
 - **Deploy merge limitation**: the merge logic adds new matchers but does not reconcile hooks _within_ an existing matcher. If template adds a hook to an existing matcher group, manually add it to the deployed `settings.json`.
 
+## Cross-Platform Compatibility
+
+All hooks are cross-platform Node.js. Path handling uses `os.homedir()` and forward-slash normalization throughout. The deploy scripts are platform-specific (`deploy.ps1` for Windows, `deploy.sh` for Linux/macOS) but produce equivalent results. The `settings.template.json` ships with `CLAUDE_CODE_USE_POWERSHELL_TOOL: "1"` (Windows default); the bash deploy script overrides this to `"0"` on Linux.
+
 ## Collaboration Principles
 
 - Start from the original requirement and root problem, not from conventions or templates.
@@ -102,9 +113,16 @@ Two-tier model architecture routed through SnowsRouter (ppchat proxy):
 
 ## Syncing Across Machines
 
-```bash
+**Windows:**
+```powershell
 git pull
 .\deploy.ps1 -Force
+```
+
+**Linux/macOS:**
+```bash
+git pull
+./deploy.sh --force
 ```
 
 After deploy, verify with `/harness-check`.

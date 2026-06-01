@@ -6,16 +6,16 @@ $ARGUMENTS
 
 Run the following checks and report status:
 
-### 1. NadirClaw LLM Router
+### 1. SnowsRouter (OpenWrt)
 ```bash
-curl -s http://localhost:8856/health
+curl -s -o /dev/null -w "%{http_code}" http://192.168.8.1:8856/
 ```
-- Status: OK / NOT RUNNING
-- Version and model config
+- Status: OK (200) / NOT RUNNING
+- Shared router deployed on OpenWrt, serves all clients
 
-### 2. Local vLLM (Nemotron)
+### 2. vLLM (Workstation 192.168.8.227)
 ```bash
-curl -s http://localhost:8001/v1/models
+curl -s http://192.168.8.227:8000/v1/models
 ```
 - Status: OK / NOT RUNNING
 - Model name and context window
@@ -42,8 +42,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 | Service         | Status | Details |
 |-----------------|--------|---------|
-| NadirClaw       | OK     | v0.11.0 |
-| vLLM/Nemotron   | OK     | 262K ctx |
+| SnowsRouter     | OK     | 200     |
+| vLLM            | OK     | 200K ctx |
 | ppchat.vip      | OK     | 200     |
 | Zhipu AI        | OK     | 200     |
 | MiniMax         | OK     | 200     |

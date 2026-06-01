@@ -62,4 +62,4 @@ When the user says "remember X" or you need to save an important finding:
 ## Keywords (for Wing Matching)
 Each wing's README.md has a `## Keywords` line. The session-start hook matches
 these keywords against the project directory path and CLAUDE.md content. Use
-specific, unique keywords (e.g., "nadirclaw" not "routing").
+specific, unique keywords (e.g., "snowsrouter" not "routing").

@@ -2,7 +2,7 @@
  * Session Start Hook
  *
  * On each new Claude Code session, this hook:
- * 1. Shows a brief environment status (NadirClaw, vLLM)
+ * 1. Shows a brief environment status (SnowsRouter, vLLM)
  * 2. Detects project type and loads relevant rules
  * 3. Shows enriched workspace briefing (key files, commands, git info, memory)
  * 4. Auto-initializes MEMORY.md if the project's memory directory lacks it
@@ -11,6 +11,7 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const os = require("os");
 const { execSync } = require("child_process");
 
 function fetchJSON(url, timeout = 3000) {
@@ -258,14 +259,13 @@ function extractMemorySnippets(memories) {
  * Matches cwd to the correct project directory by normalizing the path.
  */
 function findProjectMemoryDir(cwd) {
-  const home = process.env.USERPROFILE || process.env.HOME;
+  const home = os.homedir();
   const projectsDir = path.join(home, ".claude", "projects");
   if (!fs.existsSync(projectsDir)) return null;
 
-  // Normalize cwd to match directory naming: D:\Quant\Foo -> D--Quant-Foo
+  // Normalize cwd to match Claude Code's directory naming convention
   const cwdNormalized = cwd
-    .replace(/\\/g, "-")
-    .replace(/:/g, "")
+    .replace(/[\\/]/g, "-")
     .replace(/\/$/, "");
   const directMatch = path.join(projectsDir, cwdNormalized, "memory");
   if (fs.existsSync(directMatch)) return directMatch;
@@ -297,7 +297,8 @@ function ensureMemoryInit(memoryDir) {
 
   const projectName = path
     .basename(path.dirname(memoryDir))
-    .replace(/^D--/, "")
+    .replace(/^[A-Z]--/, "")
+    .replace(/^-/, "")
     .replace(/-/g, "/");
 
   const template = [
@@ -325,7 +326,7 @@ function ensureMemoryInit(memoryDir) {
  * Memory Palace — find the project's memory directory with wings/ structure
  */
 function findMemoryPalaceDir(cwd) {
-  const home = process.env.USERPROFILE || process.env.HOME;
+  const home = os.homedir();
   const claudeProjectsDir = path.join(home, ".claude", "projects");
   if (!fs.existsSync(claudeProjectsDir)) return null;
 
@@ -336,9 +337,10 @@ function findMemoryPalaceDir(cwd) {
       const memoryDir = path.join(claudeProjectsDir, dir, "memory");
       if (fs.existsSync(path.join(memoryDir, "wings"))) {
         // Check if project hash matches cwd
+        const dirSlug = dir.toLowerCase().replace(/^[a-z]--/, "").replace(/^-/, "");
         if (
-          cwdLower.includes(dir.split("-").pop().toLowerCase()) ||
-          dir.includes("D--Quant")
+          cwdLower.includes(dirSlug) ||
+          dir.toLowerCase().includes("quant")
         ) {
           return memoryDir;
         }
@@ -544,8 +546,8 @@ async function main() {
   const memoryInit = ensureMemoryInit(memDir);
 
   // 1. Check services
-  const nadirclaw = await fetchJSON("http://localhost:8856/health");
-  const vllm = await fetchJSON("http://localhost:8000/v1/models");
+  const snowsrouter = await fetchJSON("http://192.168.8.1:8856/health");
+  const vllm = await fetchJSON("http://192.168.8.227:8000/v1/models");
 
   const lines = [];
   lines.push("=== Session Start ===");
@@ -553,19 +555,24 @@ async function main() {
 
   // Service status
   lines.push("[Services]");
-  if (nadirclaw?.status === "ok") {
-    lines.push(
-      `  NadirClaw: OK (v${nadirclaw.version}, simple=${nadirclaw.simple_model})`,
-    );
+  // SnowsRouter runs on OpenWrt at 192.168.8.1:8856, /health may not exist but root responds 200
+  if (snowsrouter && snowsrouter.status === "ok") {
+    lines.push("  SnowsRouter: OK");
   } else {
-    lines.push("  NadirClaw: NOT RUNNING - run: nadirclaw serve --verbose");
+    // Fallback: check if the root page responds
+    try {
+      const rootCheck = await fetchJSON("http://192.168.8.1:8856/");
+      lines.push("  SnowsRouter: OK");
+    } catch {
+      lines.push("  SnowsRouter: NOT RUNNING - check 192.168.8.1:8856");
+    }
   }
 
   if (vllm?.data?.length > 0) {
     const model = vllm.data[0];
-    lines.push(`  vLLM: ${model.id} (${model.max_model_len} ctx)`);
+    lines.push(`  vLLM: ${model.id} (${model.max_model_len} ctx) @ 192.168.8.227`);
   } else {
-    lines.push("  vLLM: NOT RUNNING - run: docker start nemotron-supervisor");
+    lines.push("  vLLM: NOT RUNNING - check 192.168.8.227:8000");
   }
 
   lines.push("");
@@ -640,7 +647,7 @@ async function main() {
 
   // Write health cache for session-end.js to read
   const healthCache = {
-    nadirclaw: nadirclaw?.status === "ok" ? "ok" : null,
+    snowsrouter: snowsrouter?.status === "ok" ? "ok" : null,
     vllm: vllm?.data?.length > 0 ? "ok" : null,
     checked_at: new Date().toISOString(),
     cwd,
@@ -649,7 +656,7 @@ async function main() {
   };
   try {
     const cachePath = path.join(
-      process.env.USERPROFILE || process.env.HOME,
+      os.homedir(),
       ".claude",
       ".session-health-cache.json",
     );

@@ -23,6 +23,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code project config (generated, not harness source)
+.claude/
+
 # Node
 node_modules/
 

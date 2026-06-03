@@ -31,3 +31,6 @@ node_modules/
 
 # Test artifacts
 test-integration.js
+
+# Design docs (private)
+docs/

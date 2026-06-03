@@ -160,6 +160,39 @@ if (Test-Path $TemplateSettings) {
             }
         }
 
+        # Merge mcpServers section
+        if ($template.mcpServers) {
+            if (-not $settings.mcpServers) {
+                $settings | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue $template.mcpServers
+                Write-Ok "Added mcpServers section"
+            } else {
+                foreach ($prop in $template.mcpServers.PSObject.Properties) {
+                    if (-not $settings.mcpServers.PSObject.Properties.Name.Contains($prop.Name)) {
+                        $settings.mcpServers | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value
+                        Write-Ok "Added MCP server: $($prop.Name)"
+                    }
+                }
+            }
+        }
+
+        # Merge new permissions
+        if ($template.permissions -and $template.permissions.allow) {
+            if (-not $settings.permissions) {
+                $settings | Add-Member -NotePropertyName "permissions" -NotePropertyValue $template.permissions
+            } elseif (-not $settings.permissions.allow) {
+                $settings.permissions | Add-Member -NotePropertyName "allow" -NotePropertyValue $template.permissions.allow
+            } else {
+                $existingAllow = $settings.permissions.allow
+                foreach ($perm in $template.permissions.allow) {
+                    if ($existingAllow -notcontains $perm) {
+                        $existingAllow += $perm
+                        Write-Ok "Added permission: $perm"
+                    }
+                }
+                $settings.permissions.allow = $existingAllow
+            }
+        }
+
         # Write back (UTF8 without BOM)
         $jsonOutput = $settings | ConvertTo-Json -Depth 10
         [System.IO.File]::WriteAllText($SettingsFile, $jsonOutput, [System.Text.UTF8Encoding]::new($false))

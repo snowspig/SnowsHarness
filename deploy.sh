@@ -141,12 +141,13 @@ if [[ -f "$TEMPLATE_FILE" ]]; then
       tmp_file=$(mktemp)
       jq --arg pshell "$PSHELL_VAL" '
         . as $existing |
-        (input | .hooks) as $templateHooks |
+        (input) as $template |
+        # Merge hooks
         .hooks = (($existing.hooks // {}) |
-          reduce ($templateHooks | keys[]) as $event (
+          reduce ($template.hooks | keys[]) as $event (
             .;
             .[$event] = (($existing.hooks[$event] // []) +
-              [$templateHooks[$event][] |
+              [$template.hooks[$event][] |
                 select(.matcher as $m |
                   ($existing.hooks[$event] // []) |
                   all(.matcher != $m)
@@ -155,6 +156,13 @@ if [[ -f "$TEMPLATE_FILE" ]]; then
             )
           )
         ) |
+        # Merge mcpServers (additive only)
+        .mcpServers = (($existing.mcpServers // {}) + ($template.mcpServers // {})) |
+        # Merge permissions.allow (additive)
+        .permissions.allow = (($existing.permissions.allow // []) + [
+          $template.permissions.allow[] |
+          select(. as $p | ($existing.permissions.allow // []) | index($p) | not)
+        ]) |
         .env.CLAUDE_CODE_USE_POWERSHELL_TOOL = $pshell
       ' "$SETTINGS_FILE" "$TEMPLATE_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
 

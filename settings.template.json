@@ -67,7 +67,11 @@
       "Write",
       "Edit",
       "Glob",
-      "Grep"
+      "Grep",
+      "mcp__snows-index__code_search",
+      "mcp__snows-index__code_explore",
+      "mcp__snows-index__code_callers",
+      "mcp__snows-index__code_impact"
     ],
     "defaultMode": "auto"
   },
@@ -83,6 +87,10 @@
           {
             "type": "command",
             "command": "node ~/.claude/hooks/project-context.js"
+          },
+          {
+            "type": "command",
+            "command": "node ~/.claude/hooks/code-index-init.js"
           }
         ]
       }
@@ -149,6 +157,15 @@
         ]
       },
       {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ~/.claude/hooks/code-index-update.js"
+          }
+        ]
+      },
+      {
         "matcher": "",
         "hooks": [
           {
@@ -207,5 +224,11 @@
     "learning-output-style@claude-plugins-official": true
   },
   "skipDangerousModePermissionPrompt": true,
-  "skipAutoPermissionPrompt": true
+  "skipAutoPermissionPrompt": true,
+  "mcpServers": {
+    "snows-index": {
+      "command": "node",
+      "args": ["~/.claude/hooks/code-index-mcp.js"]
+    }
+  }
 }

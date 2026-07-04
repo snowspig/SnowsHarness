@@ -1,0 +1,17 @@
+{
+  "name": "snows-harness",
+  "version": "1.0.0",
+  "description": "SnowsHarness for ZCode: code-index MCP (symbol search, call graph, impact analysis), safety hooks (destructive-command guard, config-file protection, stale-edit block, secret detect), and dev-workflow commands. GLM-friendly port of the Claude Code harness.",
+  "author": { "name": "snowspig" },
+  "license": "MIT",
+  "hooks": "hooks",
+  "mcpServers": {
+    "snows-index": {
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/code-index-mcp.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}"
+    }
+  },
+  "skills": "skills",
+  "commands": "commands"
+}

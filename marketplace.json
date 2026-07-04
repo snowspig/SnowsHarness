@@ -1,0 +1,11 @@
+{
+  "name": "snows-local",
+  "version": 1,
+  "plugins": [
+    {
+      "name": "snows-harness",
+      "source": { "kind": "directory", "path": "./zcode-plugin" },
+      "version": "1.0.0"
+    }
+  ]
+}

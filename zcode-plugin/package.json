@@ -1,0 +1,6 @@
+{
+  "name": "snows-harness",
+  "version": "1.0.0",
+  "description": "SnowsHarness for ZCode — code index MCP, safety hooks, dev workflow commands.",
+  "private": true
+}

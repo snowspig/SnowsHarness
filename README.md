@@ -90,24 +90,24 @@ A built-in code knowledge graph inspired by [CodeGraph](https://github.com/colby
 
 ### Hooks Overview
 
-| Hook                  | Trigger      | Purpose                                                 |
-| --------------------- | ------------ | ------------------------------------------------------- |
-| `action-guard`        | PreToolUse   | Warns on destructive commands and sensitive file writes |
-| `config-protection`   | PreToolUse   | Blocks edits to linter/tool config files                |
-| `change-safety`       | PreToolUse   | Prevents stale-context edits                            |
-| `secret-detect`       | PostToolUse  | Detects API keys and secrets in output                  |
-| `output-size-warning` | PostToolUse  | Warns on oversized tool output                          |
-| `post-write-verify`   | PostToolUse  | Validates files after write                             |
-| `track-written-files` | PostToolUse  | Tracks modified files for batch formatting              |
-| `suggest-compact`     | PostToolUse  | Suggests /compact when context grows large              |
-| `code-index-update`   | PostToolUse  | Marks edited files for index re-sync                    |
-| `session-start`       | SessionStart | Environment status, project detection, memory init      |
-| `project-context`     | SessionStart | Injects project-specific context hints                  |
-| `code-index-init`     | SessionStart | Auto-indexes project source files                       |
-| `batch-format`        | Stop         | Runs prettier/ruff on all modified files                |
-| `memory-emergency-save` | PreCompact | Saves insights before context compression               |
-| `session-end`         | SessionEnd   | Writes structured telemetry                             |
-| `session-learner`     | SessionEnd   | Extracts debug patterns into memory palace              |
+| Hook                    | Trigger      | Purpose                                                 |
+| ----------------------- | ------------ | ------------------------------------------------------- |
+| `action-guard`          | PreToolUse   | Warns on destructive commands and sensitive file writes |
+| `config-protection`     | PreToolUse   | Blocks edits to linter/tool config files                |
+| `change-safety`         | PreToolUse   | Prevents stale-context edits                            |
+| `secret-detect`         | PostToolUse  | Detects API keys and secrets in output                  |
+| `output-size-warning`   | PostToolUse  | Warns on oversized tool output                          |
+| `post-write-verify`     | PostToolUse  | Validates files after write                             |
+| `track-written-files`   | PostToolUse  | Tracks modified files for batch formatting              |
+| `suggest-compact`       | PostToolUse  | Suggests /compact when context grows large              |
+| `code-index-update`     | PostToolUse  | Marks edited files for index re-sync                    |
+| `session-start`         | SessionStart | Environment status, project detection, memory init      |
+| `project-context`       | SessionStart | Injects project-specific context hints                  |
+| `code-index-init`       | SessionStart | Auto-indexes project source files                       |
+| `batch-format`          | Stop         | Runs prettier/ruff on all modified files                |
+| `memory-emergency-save` | PreCompact   | Saves insights before context compression               |
+| `session-end`           | SessionEnd   | Writes structured telemetry                             |
+| `session-learner`       | SessionEnd   | Extracts debug patterns into memory palace              |
 
 ## Syncing Across Machines
 
@@ -170,11 +170,11 @@ SnowsHarness 是一个面向 [Claude Code](https://claude.ai/code) 的便携式�
 
 SnowsHarness 通过 SnowsRouter（部署在 OpenWrt 路由器上）使用双层模型架构：
 
-| 角色       | 模型       | 配置                                      |
-| ---------- | ---------- | ----------------------------------------- |
-| 主对话     | Classifier | `ANTHROPIC_MODEL: "Classifier"`           |
-| 子智能体   | Classifier | `CLAUDE_CODE_SUBAGENT_MODEL: "Classifier"` |
-| 快速模式   | GLM 5.1    | `ANTHROPIC_SMALL_FAST_MODEL: "glm-5.1"`   |
+| 角色     | 模型       | 配置                                       |
+| -------- | ---------- | ------------------------------------------ |
+| 主对话   | Classifier | `ANTHROPIC_MODEL: "Classifier"`            |
+| 子智能体 | Classifier | `CLAUDE_CODE_SUBAGENT_MODEL: "Classifier"` |
+| 快速模式 | GLM 5.1    | `ANTHROPIC_SMALL_FAST_MODEL: "glm-5.1"`    |
 
 将 `ANTHROPIC_BASE_URL` 设为 SnowsRouter 端点地址。Classifier 模型名会触发智能模型选择。
 
@@ -182,12 +182,12 @@ SnowsHarness 通过 SnowsRouter（部署在 OpenWrt 路由器上）使用双层�
 
 灵感来自 [CodeGraph](https://github.com/colbymchenry/codegraph)，零外部依赖重新实现：
 
-| 组件 | 功能 |
-|------|------|
-| **正则提取器** | 支持 8 种语言：JS/TS、Python、Go、Rust、Java、C#、C/C++、CSS |
-| **SQLite 知识图谱** | 符号（函数、类、方法）+ 关系（调用、包含、导入）+ FTS5 全文搜索 |
-| **MCP 服务器** | 4 个工具：`code_search`、`code_explore`、`code_callers`、`code_impact` |
-| **自动索引** | 会话启动时自动建索引，编辑文件时增量更新 |
+| 组件                | 功能                                                                   |
+| ------------------- | ---------------------------------------------------------------------- |
+| **正则提取器**      | 支持 8 种语言：JS/TS、Python、Go、Rust、Java、C#、C/C++、CSS           |
+| **SQLite 知识图谱** | 符号（函数、类、方法）+ 关系（调用、包含、导入）+ FTS5 全文搜索        |
+| **MCP 服务器**      | 4 个工具：`code_search`、`code_explore`、`code_callers`、`code_impact` |
+| **自动索引**        | 会话启动时自动建索引，编辑文件时增量更新                               |
 
 ## 多机同步
 

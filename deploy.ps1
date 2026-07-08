@@ -14,26 +14,74 @@
 .PARAMETER Force
     Overwrite existing files without prompting.
 
+.PARAMETER Mini
+    Deploy compressed rules (saves ~17% tokens).
+
+.PARAMETER Full
+    Deploy full rules with detailed examples.
+
 .EXAMPLE
-    .\deploy.ps1              # Interactive deploy
+    .\deploy.ps1              # Interactive deploy (prompts for mode)
     .\deploy.ps1 -DryRun      # Preview only
-    .\deploy.ps1 -Force       # Deploy without prompts
+    .\deploy.ps1 -Force       # Deploy without prompts (defaults to mini)
+    .\deploy.ps1 -Mini        # Deploy with compressed rules
+    .\deploy.ps1 -Full        # Deploy with full rules
 #>
 
 param(
     [switch]$DryRun,
-    [switch]$Force
+    [switch]$Force,
+    [switch]$Mini,
+    [switch]$Full
 )
 
 $ErrorActionPreference = "Stop"
+
+# --- Determine mode ---
+$useMini = $null
+if ($Mini -and $Full) {
+    Write-Fail "Cannot specify both -Mini and -Full"
+    exit 1
+} elseif ($Mini) {
+    $useMini = $true
+} elseif ($Full) {
+    $useMini = $false
+} elseif (-not $Force -and -not $DryRun) {
+    # Interactive mode selection
+    Write-Host ""
+    Write-Host "Select deployment mode:" -ForegroundColor Cyan
+    Write-Host "  1) full  - Complete rules with detailed examples (baseline)" -ForegroundColor White
+    Write-Host "  2) mini  - Compressed rules, ~17% token savings (daily dev)" -ForegroundColor White
+    Write-Host ""
+    $choice = Read-Host "Choose mode [1/2, default: 2]"
+    switch ($choice) {
+        "1" { $useMini = $false; Write-Host "[DEPLOY] Mode: full" -ForegroundColor Cyan }
+        "2" { $useMini = $true; Write-Host "[DEPLOY] Mode: mini" -ForegroundColor Cyan }
+        "" { $useMini = $true; Write-Host "[DEPLOY] Mode: mini (default)" -ForegroundColor Cyan }
+        default { Write-Warn "Invalid choice, defaulting to mini"; $useMini = $true }
+    }
+    Write-Host ""
+} elseif ($Force) {
+    # Default to mini when forced without explicit choice
+    $useMini = $true
+}
 
 # --- Paths ---
 $RepoRoot = $PSScriptRoot
 $ClaudeDir = Join-Path $env:USERPROFILE ".claude"
 
+# Determine rules source based on mode
+if ($useMini -eq $true) {
+    $rulesSrc = "rules-mini"
+    Write-Host "[DEPLOY] Using compressed rules (mini mode, ~17% token savings)" -ForegroundColor Cyan
+} else {
+    $rulesSrc = "rules"
+    Write-Host "[DEPLOY] Using full rules (complete guidelines)" -ForegroundColor Cyan
+}
+
 $Components = @(
     @{ Name = "hooks";    Src = "hooks";    Dest = "hooks";    Filter = "*.js"  },
-    @{ Name = "rules";    Src = "rules";    Dest = "rules";    Filter = "*.md"  },
+    @{ Name = "rules";    Src = $rulesSrc;  Dest = "rules";    Filter = "*.md"  },
     @{ Name = "commands"; Src = "commands"; Dest = "commands"; Filter = "*.md"  },
     @{ Name = "agents";   Src = "agents";   Dest = "agents";   Filter = "*.md"  }
 )
@@ -204,13 +252,23 @@ if (Test-Path $TemplateSettings) {
 if ($DryRun) {
     Write-Host ""
     Write-Status "Dry run complete. $totalCopied files would be deployed."
+    if ($useMini -eq $true) { Write-Status "Mode: mini (compressed rules)" }
     Write-Status "Run without -DryRun to apply."
 } else {
     Write-Host ""
     Write-Ok "Deploy complete. $totalCopied files deployed."
     Write-Host ""
+    if ($useMini -eq $true) {
+        Write-Status "Deployed with compressed rules (mini mode)"
+    } else {
+        Write-Status "Deployed with full rules"
+    }
+    Write-Host ""
     Write-Status "Next steps:"
     Write-Host "  1. Review settings.json for hooks and env vars"
     Write-Host "  2. Run /harness-check to verify everything"
     Write-Host "  3. Install plugins: /plugin install <name>"
+    Write-Host ""
+    Write-Host "To switch modes later:"
+    Write-Host "  node ~/.claude/hooks/switch-harness-mode.js [mini|full]"
 }

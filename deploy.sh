@@ -27,16 +27,22 @@ for arg in "$@"; do
     --help|-h)
       echo "Usage: $0 [--dry-run|--force|--mini|--full]"
       echo "  --dry-run, -n   Preview what will change"
-      echo "  --force, -f     Deploy without prompts"
-      echo "  --mini, -m      Deploy compressed rules (saves ~17% tokens)"
-      echo "  --full          Deploy full rules (default, unless chosen interactively)"
+      echo "  --force, -f     Deploy without prompts (defaults to mini)"
+      echo "  --mini, -m      Deploy compressed rules (saves ~17% tokens, default)"
+      echo "  --full          Deploy full rules (complete guidelines and examples)"
       exit 0
       ;;
     *) echo "Unknown argument: $arg"; exit 1 ;;
   esac
 done
 
-# Interactive mode selection if not specified and not forced/dry-run
+# Logging functions (defined early so the interactive block below can use them)
+log_status() { echo "[DEPLOY] $1"; }
+log_ok()     { echo "[OK]     $1"; }
+log_warn()   { echo "[WARN]   $1" >&2; }
+log_fail()   { echo "[FAIL]   $1" >&2; }
+
+# Mode selection: prompt interactively unless --force/--dry-run or an explicit mode was given
 if [[ -z "$MINI_MODE" ]] && ! $FORCE && ! $DRY_RUN; then
   echo ""
   echo "Select deployment mode:"
@@ -50,16 +56,11 @@ if [[ -z "$MINI_MODE" ]] && ! $FORCE && ! $DRY_RUN; then
     *) log_warn "Invalid choice, defaulting to mini"; MINI_MODE=true ;;
   esac
   echo ""
-elif [[ -z "$MINI_MODE" ]] && $FORCE; then
-  # Default to mini when forced without explicit choice
-  MINI_MODE=true
 fi
 
-# Logging functions
-log_status() { echo "[DEPLOY] $1"; }
-log_ok()     { echo "[OK]     $1"; }
-log_warn()   { echo "[WARN]   $1" >&2; }
-log_fail()   { echo "[FAIL]   $1" >&2; }
+# Default to mini for any remaining unset path (e.g. --dry-run or --force without explicit mode),
+# so preview and apply always select the same mode.
+MINI_MODE="${MINI_MODE:-true}"
 
 # Pre-checks
 if [[ ! -d "$CLAUDE_DIR" ]]; then
@@ -209,6 +210,19 @@ if [[ -f "$TEMPLATE_FILE" ]]; then
   fi
 fi
 
+# Stage both rule sets + record chosen mode so the post-deploy switcher works.
+# The switcher copies from ~/.claude/rules-full|rules-mini into ~/.claude/rules.
+CHOSEN_MODE="full"; [[ "$MINI_MODE" == "true" ]] && CHOSEN_MODE="mini"
+if $DRY_RUN; then
+  log_status "Would stage rules-full/rules-mini references + write harness-mode.json (mode: $CHOSEN_MODE)"
+else
+  mkdir -p "$CLAUDE_DIR/rules-full" "$CLAUDE_DIR/rules-mini"
+  cp -r "$SCRIPT_DIR/rules/." "$CLAUDE_DIR/rules-full/"
+  cp -r "$SCRIPT_DIR/rules-mini/." "$CLAUDE_DIR/rules-mini/"
+  printf '{"mode":"%s","note":"Managed by switch-harness-mode.js"}\n' "$CHOSEN_MODE" > "$CLAUDE_DIR/harness-mode.json"
+  log_ok "Staged rules-full/ + rules-mini/ references (mode: $CHOSEN_MODE)"
+fi
+
 # Summary
 echo ""
 if $DRY_RUN; then
@@ -233,6 +247,7 @@ else
   echo "  2. Run /harness-check to verify everything"
   echo "  3. Install plugins: /plugin install <name>"
   echo ""
-  echo "To switch modes later:"
+  echo "To switch modes later (no re-deploy needed):"
   echo "  node ~/.claude/hooks/switch-harness-mode.js [mini|full]"
+  echo "  (run without arguments to print current mode)"
 fi

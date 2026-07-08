@@ -37,6 +37,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# --- Logging helpers (defined early so the mode block below can use them) ---
+function Write-Status($msg) { Write-Host "[DEPLOY] $msg" -ForegroundColor Cyan }
+function Write-Ok($msg)     { Write-Host "[OK]     $msg" -ForegroundColor Green }
+function Write-Warn($msg)   { Write-Host "[WARN]   $msg" -ForegroundColor Yellow }
+function Write-Fail($msg)   { Write-Host "[FAIL]   $msg" -ForegroundColor Red }
+
 # --- Determine mode ---
 $useMini = $null
 if ($Mini -and $Full) {
@@ -66,6 +72,10 @@ if ($Mini -and $Full) {
     $useMini = $true
 }
 
+# Default to mini for any remaining unset path (e.g. -DryRun without -Mini/-Full),
+# so preview and apply always select the same mode.
+if ($null -eq $useMini) { $useMini = $true }
+
 # --- Paths ---
 $RepoRoot = $PSScriptRoot
 $ClaudeDir = Join-Path $env:USERPROFILE ".claude"
@@ -85,11 +95,6 @@ $Components = @(
     @{ Name = "commands"; Src = "commands"; Dest = "commands"; Filter = "*.md"  },
     @{ Name = "agents";   Src = "agents";   Dest = "agents";   Filter = "*.md"  }
 )
-
-function Write-Status($msg) { Write-Host "[DEPLOY] $msg" -ForegroundColor Cyan }
-function Write-Ok($msg)     { Write-Host "[OK]     $msg" -ForegroundColor Green }
-function Write-Warn($msg)   { Write-Host "[WARN]   $msg" -ForegroundColor Yellow }
-function Write-Fail($msg)   { Write-Host "[FAIL]   $msg" -ForegroundColor Red }
 
 # --- Pre-checks ---
 if (-not (Test-Path $ClaudeDir)) {
@@ -248,6 +253,22 @@ if (Test-Path $TemplateSettings) {
     }
 }
 
+# --- Stage both rule sets + record chosen mode so the post-deploy switcher works ---
+$chosenMode = if ($useMini -eq $true) { "mini" } else { "full" }
+if ($DryRun) {
+    Write-Status "Would stage rules-full/rules-mini references + write harness-mode.json (mode: $chosenMode)"
+} else {
+    $rulesFullDir = Join-Path $ClaudeDir "rules-full"
+    $rulesMiniDir = Join-Path $ClaudeDir "rules-mini"
+    New-Item -ItemType Directory -Path $rulesFullDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $rulesMiniDir -Force | Out-Null
+    Copy-Item -Path (Join-Path $RepoRoot "rules\*") -Destination $rulesFullDir -Recurse -Force
+    Copy-Item -Path (Join-Path $RepoRoot "rules-mini\*") -Destination $rulesMiniDir -Recurse -Force
+    $modeConfig = [PSCustomObject]@{ mode = $chosenMode; note = "Managed by switch-harness-mode.js" }
+    $modeConfig | ConvertTo-Json | Set-Content -Path (Join-Path $ClaudeDir "harness-mode.json") -Encoding UTF8
+    Write-Ok "Staged rules-full/ + rules-mini/ references (mode: $chosenMode)"
+}
+
 # --- Summary ---
 if ($DryRun) {
     Write-Host ""
@@ -269,6 +290,7 @@ if ($DryRun) {
     Write-Host "  2. Run /harness-check to verify everything"
     Write-Host "  3. Install plugins: /plugin install <name>"
     Write-Host ""
-    Write-Host "To switch modes later:"
+    Write-Host "To switch modes later (no re-deploy needed):"
     Write-Host "  node ~/.claude/hooks/switch-harness-mode.js [mini|full]"
+    Write-Host "  (run without arguments to print current mode)"
 }

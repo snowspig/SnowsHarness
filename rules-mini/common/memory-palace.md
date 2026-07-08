@@ -55,6 +55,20 @@ memory/
 - 适用上下文
 ```
 
+## Verbatim Principle
+
+捕获用户陈述时，存储**原话**（verbatim），不要总结。总结会丢失细节。
+用 `>` 引用语法标记原话。
+
+```markdown
+## Error Handling Preference
+
+- **Date**: YYYY-MM-DD | **Status**: active
+- > "不要给我加 try-catch 包裹，让错误直接暴露"
+- **Why:** 用户偏好显式错误处理
+- **How to apply:** 仅在用户要求时才加 try-catch
+```
+
 ## 存储原则
 
 - ✅ 未来有用 → 保存
@@ -78,7 +92,18 @@ memory/
 | Wing | Entries | Updated | Keywords |
 ```
 
-**限制**: max 200 行
+**限制**: max 200 行（超出则裁剪最旧的 Active Context 条目）
+
+## 文件大小限制
+
+| 文件                       | 最大行数 | 超出处理             |
+| -------------------------- | -------- | -------------------- |
+| `MEMORY.md`                | 200      | 裁剪最旧 Active      |
+| `identity.md`              | 50       | 合并重复             |
+| 每个 wing `README.md`      | 80       | 归档旧条目           |
+| 每个 wing `facts.md`       | 100      | 归档被取代的 fact    |
+| 每个 wing `events.md`      | 100      | **仅保留最近 30 天** |
+| 每个 wing `preferences.md` | 50       | 合并重复             |
 
 ## 写入触发
 

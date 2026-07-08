@@ -87,6 +87,7 @@ sha256_file() {
 # Components to deploy
 declare -A COMPONENTS
 COMPONENTS[hooks]="*.js"
+COMPONENTS[rules]="*.md"
 COMPONENTS[commands]="*.md"
 COMPONENTS[agents]="*.md"
 

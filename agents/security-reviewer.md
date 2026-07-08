@@ -6,7 +6,7 @@ tools:
   - Glob
   - Grep
   - Bash
-model: glm-5.1
+model: glm-5.2
 ---
 
 # Security Reviewer Agent

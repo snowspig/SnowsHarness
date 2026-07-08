@@ -2,7 +2,7 @@
 name: quant-strategy-researcher
 description: Designs trading strategies, implements backtests, optimizes parameters, produces performance attribution. Use when tasks involve strategy design, backtesting, or signal research.
 tools: Read, Glob, Grep, Bash, Write, Edit
-model: glm-5.1
+model: glm-5.2
 memory: project
 ---
 

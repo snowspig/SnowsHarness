@@ -2,7 +2,7 @@
 name: quant-data-analyst
 description: Fetches market data, calculates alpha factors, performs statistical analysis. Use when tasks involve data fetching, factor calculation, or data quality checks.
 tools: Read, Glob, Grep, Bash, Write, Edit
-model: glm-5.1
+model: glm-5.2
 memory: project
 ---
 

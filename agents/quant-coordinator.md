@@ -2,7 +2,7 @@
 name: quant-coordinator
 description: Manages quant research workflow, coordinates data/strategy/risk agents, synthesizes findings. Use as team lead for quantitative research projects.
 tools: Read, Glob, Grep, Bash
-model: opus
+model: claude-opus
 ---
 
 # Quantitative Research Coordinator

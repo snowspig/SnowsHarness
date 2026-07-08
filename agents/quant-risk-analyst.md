@@ -2,7 +2,7 @@
 name: quant-risk-analyst
 description: Evaluates portfolio risk, stress tests, scenario analysis, risk budgeting. Use when tasks involve risk evaluation, VaR calculation, or portfolio analysis.
 tools: Read, Glob, Grep, Bash, Write, Edit
-model: glm-5.1
+model: glm-5.2
 memory: project
 ---
 

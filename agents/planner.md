@@ -8,7 +8,7 @@ tools:
   - Bash
   - Write
   - Edit
-model: glm-5.1
+model: glm-5.2
 ---
 
 # Planner Agent
